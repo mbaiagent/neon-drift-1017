@@ -1,56 +1,62 @@
 # NEON DRIFT 1017
 
-一个**零依赖、零素材**的网页版 3D 赛车游戏。整个画面（赛道、跑车、棕榈树、广告牌、太阳、音效、音乐）全部由代码实时生成，没有任何图片、模型或第三方库。
+A browser racing game with **zero dependencies and zero assets**.
 
-打开 `index.html` 即可游玩（无需服务器、无需联网）。
+Every pixel and every sound — the road, the cars, the palm trees, the billboards, the striped sun, the engine note and the soundtrack — is generated at runtime. No images, no 3D models, no audio files, no libraries.
 
-![比赛中](screenshots/03-race.png)
+Open `index.html` and play. No server, no build step, no network required.
 
-| 主菜单 | 起跑 | 氮气 |
+![Racing](screenshots/03-race.png)
+
+| Title screen | Starting grid | Nitro |
 | --- | --- | --- |
-| ![菜单](screenshots/01-menu.png) | ![起跑](screenshots/02-start.png) | ![氮气](screenshots/04-boost.png) |
+| ![Title](screenshots/01-menu.png) | ![Grid](screenshots/02-start.png) | ![Nitro](screenshots/04-boost.png) |
 
-移动端竖屏同样是完整可玩的：
+Portrait mobile is fully playable as well:
 
-<img src="screenshots/05-mobile.png" width="280" alt="移动端">
+<img src="screenshots/05-mobile.png" width="280" alt="Mobile layout">
 
-## 操作
+## Controls
 
-| 按键 | 作用 |
+| Key | Action |
 | --- | --- |
-| `↑` / `W` | 加速 |
-| `↓` / `S` | 刹车 |
-| `←` `→` / `A` `D` | 转向 |
-| `SPACE` | 氮气加速（N₂O） |
-| `ESC` / `P` | 暂停 |
-| `M` | 音乐开关 |
-| `R` | 重新开始 |
-| `F` | 显示帧率 / 渲染耗时 |
+| `↑` / `W` | Accelerate |
+| `↓` / `S` | Brake |
+| `←` `→` / `A` `D` | Steer |
+| `SPACE` | Nitro (N₂O) |
+| `ESC` / `P` | Pause |
+| `M` | Toggle music |
+| `R` | Restart |
+| `F` | Show FPS / frame time |
 
-支持手柄（左摇杆转向，RT 加速、LT 刹车、A 键氮气）与移动端触屏按键。
+Gamepad (left stick, RT/LT, A for nitro) and touch controls are supported.
 
-## 玩法
+## Gameplay
 
-* 夕阳海岸赛道，3 圈，6 台车，从最后一位（P6）起步。
-* 冲出赛道会掉速并扬尘，撞上护栏会掉速打转视角。
-* 氮气会消耗与自动回充，出弯再点更划算。
-* 弯道里车身会向外甩，需要提前反打方向；高速大角度转向会自动进入漂移（轮胎尖叫 + 烟雾）。
+* Sunset coast circuit, 3 laps, 6 cars. You start last, on P6.
+* Corners throw the car outward — counter-steer early. Hard steering at speed drops you into a drift (tyre screech, smoke, body roll).
+* Running wide kills your speed and kicks up dust; clipping a guard rail scrubs speed and throws sparks. An `OFF TRACK` warning flashes while you're off the road.
+* Nitro drains while held and recharges on its own. Save it for corner exits.
+* AI rivals run their own lines and slow down for corners. Overtaking flashes the position chip.
+* Live lap time, best lap, position, a schematic minimap and an analogue dial with gear and digital speed.
 
-## 技术要点
+## How it works
 
-* **伪 3D 投影**：赛道由 3984 个路段组成，逐段做透视投影，支持连续弯道、上下坡、遮挡剔除与距离雾。
-* **滚动式赛道生成**：`addRoad / addCurve / addHill / addSCurves` 组合出闭合环线，起点终点海拔自动对齐。
-* **预烘焙美术**：车辆、棕榈、霓虹灯柱、广告牌、拱门全部用 Canvas 矢量绘制后缓存成贴图，运行时只做 `drawImage`。
-* **纯手写车辆**：车身渐变、玻璃、尾灯、扩散器、尾翼、牌照、轮毂霓虹、氮气尾焰都是路径绘制。
-* **程序化音频**：WebAudio 合成引擎声（双锯齿波 + 次谐波 + 共振低通）、风噪、胎噪、碰撞、氮气，以及一段 A 小调合成器波循环（鼓、贝斯、琶音）。
-* **性能**：单帧渲染 ≈ 1ms（1440×900），包含 HUD 与小地图。
+* **Pseudo-3D projection.** The circuit is 3,984 segments long. Each frame every segment is projected into screen space, sorted back-to-front and clipped against the highest horizontal line drawn so far. Curves accumulate a lateral offset, hills raise the road, and distance fog fades the world into the horizon colour.
+* **Track generation.** `addRoad / addCurve / addHill / addSCurves` compose a closed loop; the final section eases the elevation back to zero so the start/finish seam is invisible.
+* **Pre-baked vector art.** Cars, palms, neon pylons, billboards and gates are drawn once into offscreen canvases with `Canvas2D` paths and shadows, then blitted as sprites. The player's car is a pre-rendered sheet per paint colour; brake glow, nitro jets and heat haze are layered additively at runtime.
+* **Procedural audio.** WebAudio synthesises the engine (two detuned saws, a sub oscillator and a resonant low-pass tracking RPM), wind, tyre and gravel noise, the crash impact and the nitro whoosh — plus a 112 BPM synthwave loop with kick, snare, bass and arpeggio.
+* **Performance.** Roughly 1–2 ms per frame at 1600×1000 including the HUD and minimap, measured in-browser, which leaves plenty of headroom for 60 fps on modest hardware.
 
-## 文件
+## Project layout
 
 ```
-index.html   结构 / HUD / 菜单 / 结算
-style.css    霓虹 UI 样式与动效
-game.js      渲染器、赛道、物理、AI、音频、界面逻辑
+index.html   markup, HUD, menu and results panels
+style.css    neon UI, layout and animations
+game.js      renderer, track, physics, AI, audio and UI logic
 ```
 
-> 彩蛋：赛道上所有的广告牌和拱门都在给这个模型打广告。
+## Notes
+
+* The wordmark uses Google Fonts. If it can't be reached the UI falls back to system fonts and the game still runs completely offline.
+* Every billboard and gate on the circuit is advertising the same thing this game was built with.
