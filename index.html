@@ -1,0 +1,122 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+<title>NEON DRIFT 1017</title>
+<meta name="theme-color" content="#0a0316">
+<meta name="description" content="A hand-written pseudo-3D neon racer. No libraries, no assets.">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='14' fill='%230a0316'/%3E%3Ccircle cx='32' cy='32' r='19' fill='none' stroke='%2300e5ff' stroke-width='4'/%3E%3Ccircle cx='32' cy='32' r='7' fill='%23ff2e88'/%3E%3C/svg%3E">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@500;700;900&family=Rajdhani:wght@500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<div id="stage">
+  <canvas id="scene"></canvas>
+  <div id="grain"></div>
+
+  <!-- ================= HUD ================= -->
+  <div id="hud" class="hidden">
+    <div class="hud-top">
+      <div class="chips">
+        <div class="chip"><span class="k">LAP</span><b id="lapVal">1<i>/3</i></b></div>
+        <div class="chip"><span class="k">POS</span><b id="posVal">6<i>/6</i></b></div>
+        <div class="chip wide"><span class="k">LAP TIME</span><b id="lapTime">0:00.00</b></div>
+        <div class="chip wide"><span class="k">BEST LAP</span><b id="bestTime">--:--.--</b></div>
+        <div class="chip m-speed"><span class="k">SPEED</span><b id="mSpeed">0<i>km/h</i></b></div>
+      </div>
+      <div class="map-wrap">
+        <canvas id="minimap" width="200" height="200"></canvas>
+      </div>
+    </div>
+
+    <div class="hud-bottom">
+      <div id="nitro">
+        <div class="nitro-head"><span class="k">NITRO</span><span id="nitroPct">100%</span></div>
+        <div class="bar"><i id="nitroFill"></i><em></em><em></em><em></em></div>
+        <div class="nitro-hint">SPACE</div>
+      </div>
+      <div id="gaugeWrap"><canvas id="gauge" width="260" height="260"></canvas></div>
+    </div>
+
+    <div id="warn">OFF TRACK</div>
+    <div id="msg"><div class="msg-main"></div><div class="msg-sub"></div></div>
+    <div id="flash"></div>
+    <div id="fps"></div>
+  </div>
+
+  <!-- ================= MENU ================= -->
+  <div id="menu" class="overlay">
+    <div class="menu-inner">
+      <div class="badge"><span class="dot"></span>DEEPSEEK · V4.1-FLASH-1017</div>
+      <h1 class="logo">NEON<span>DRIFT</span></h1>
+      <div class="logo-sub"><b>1017</b> · SUNSET COAST CIRCUIT</div>
+      <p class="tagline">夕阳海岸赛道 · 3 圈 · 6 台赛车 · 抓地力？不存在的。</p>
+
+      <div class="carpick" id="carpick">
+        <button class="swatch active" data-paint="0" style="--c:#ff2e88;--c2:#00e5ff" aria-label="paint pink"></button>
+        <button class="swatch" data-paint="1" style="--c:#00e5ff;--c2:#ffd166" aria-label="paint cyan"></button>
+        <button class="swatch" data-paint="2" style="--c:#b6ff3c;--c2:#ff2e88" aria-label="paint lime"></button>
+        <button class="swatch" data-paint="3" style="--c:#ffb648;--c2:#7a5cff" aria-label="paint amber"></button>
+      </div>
+
+      <button id="startBtn" class="cta"><span>START ENGINE</span><em>按 ENTER 开始</em></button>
+
+      <div class="keys">
+        <div><kbd>↑</kbd><kbd>W</kbd><span>加速</span></div>
+        <div><kbd>↓</kbd><kbd>S</kbd><span>刹车</span></div>
+        <div><kbd>←</kbd><kbd>→</kbd><span>转向</span></div>
+        <div><kbd>SPACE</kbd><span>氮气</span></div>
+        <div><kbd>ESC</kbd><span>暂停</span></div>
+        <div><kbd>M</kbd><span>音乐</span></div>
+      </div>
+      <div class="hintline">撑过 3 圈 · 别撞墙 · 出弯再点氮气</div>
+    </div>
+  </div>
+
+  <!-- ================= PAUSE ================= -->
+  <div id="pause" class="overlay hidden">
+    <div class="panel small">
+      <div class="panel-title">PAUSED</div>
+      <p class="muted">已暂停 · 按 ESC 继续</p>
+      <button class="cta mini" id="resumeBtn"><span>RESUME</span></button>
+      <button class="ghost" id="quitBtn">退出到主菜单</button>
+    </div>
+  </div>
+
+  <!-- ================= RESULTS ================= -->
+  <div id="results" class="overlay hidden">
+    <div class="panel">
+      <div class="panel-kicker" id="resKicker">RACE COMPLETE</div>
+      <div class="panel-title" id="resTitle">P1</div>
+      <div class="res-grid">
+        <div class="res-cell"><span>TOTAL</span><b id="resTotal">0:00.00</b></div>
+        <div class="res-cell"><span>BEST LAP</span><b id="resBest">0:00.00</b></div>
+        <div class="res-cell"><span>TOP SPEED</span><b id="resTop">0 km/h</b></div>
+      </div>
+      <div class="laps" id="resLaps"></div>
+      <div class="res-actions">
+        <button class="cta mini" id="againBtn"><span>RACE AGAIN</span><em>按 R</em></button>
+        <button class="ghost" id="menuBtn">主菜单</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ================= TOUCH ================= -->
+  <div id="touch" class="hidden">
+    <div class="t-left">
+      <button data-key="left">◀</button>
+      <button data-key="right">▶</button>
+    </div>
+    <div class="t-right">
+      <button data-key="brake">BRAKE</button>
+      <button data-key="accel">GAS</button>
+      <button data-key="nitro" class="nitro-btn">N₂O</button>
+    </div>
+  </div>
+</div>
+<script src="game.js"></script>
+</body>
+</html>
